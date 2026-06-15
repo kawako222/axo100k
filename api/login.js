@@ -29,10 +29,13 @@ export default async function handler(req, res) {
   try {
     const { password } = req.body;
 
+
     if (!password || typeof password !== 'string') {
       return res.status(400).json({ error: 'Payload inválido' });
     }
-
+    
+    // eslint-disable-next-line no-undef
+    console.log("CONTRASENA RECIBIDA:", password, "HASH EN ENV:", process.env.MASTER_HASH);
     // eslint-disable-next-line no-undef
     const isValid = await bcrypt.compare(password, process.env.MASTER_HASH);
 

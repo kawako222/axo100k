@@ -36,7 +36,6 @@ export default function DashboardAxoLabs() {
         
         if (response.ok) {
           const data = await response.json();
-          // Mapeamos los booleanos por si Postgres los devuelve diferentes
           const formattedData = data.map(p => ({
             ...p,
             hasCall: p.has_call,
@@ -69,6 +68,13 @@ export default function DashboardAxoLabs() {
     ? ((prospects.filter(p => p.phase === 'Cerrados / Facturados').length / messagesSent) * 100).toFixed(1) 
     : 0;
 
+  // Generador del enlace a WhatsApp con mensaje automático
+  const getWhatsAppLink = (phone, name) => {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const message = `Hola, ${name}, buenas tardes. Soy Luis Puebla, director de Axo Labs. Encontré su negocio y noté algunas áreas de oportunidad en su presencia digital que están limitando su captación de clientes en la zona. ¿Tendrían 5 minutos esta semana para mostrarles cómo podemos automatizar sus ventas con tecnología?`;
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+  };
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -81,7 +87,6 @@ export default function DashboardAxoLabs() {
     e.preventDefault();
     const token = localStorage.getItem('axo_token');
 
-    // Adaptamos los nombres para Postgres (snake_case)
     const dbPayload = {
       ...formData,
       has_call: formData.hasCall,
@@ -90,11 +95,8 @@ export default function DashboardAxoLabs() {
 
     try {
       if (formData.id) {
-        // En un futuro puedes agregar el endpoint PUT para editar en la DB
-        // Por ahora, actualizamos la vista local
         setProspects(prospects.map(p => p.id === formData.id ? formData : p));
       } else {
-        // Guardar nuevo prospecto en Neon DB
         const response = await fetch('/api/prospects', {
           method: 'POST',
           headers: { 
@@ -106,7 +108,6 @@ export default function DashboardAxoLabs() {
 
         if (response.ok) {
           const savedProspect = await response.json();
-          // Lo agregamos a la pantalla usando el ID real de la base de datos
           setProspects([{
             ...savedProspect,
             hasCall: savedProspect.has_call,
@@ -123,7 +124,6 @@ export default function DashboardAxoLabs() {
   };
 
   const deleteProspect = (id) => {
-    // Pendiente: Endpoint DELETE en la API
     setProspects(prospects.filter(p => p.id !== id));
   };
 
@@ -134,12 +134,10 @@ export default function DashboardAxoLabs() {
   };
 
   const togglePaidStatus = (id) => {
-    // Pendiente: Endpoint PUT en la API
     setProspects(prospects.map(p => p.id === id ? { ...p, isPaid: !p.isPaid } : p));
   };
 
   const updatePhase = (id, newPhase) => {
-    // Pendiente: Endpoint PUT en la API
     setProspects(prospects.map(p => p.id === id ? { ...p, phase: newPhase } : p));
   };
 
@@ -208,15 +206,31 @@ export default function DashboardAxoLabs() {
               <div className="flex justify-between items-center mb-4">
                 <span className="text-xs uppercase tracking-[0.2em] text-[#6C6863] flex items-center gap-2">
                   <Target size={14} className="text-[#D4AF37]" />
-                  Mensajes (Semana)
+                  Mensajes Enviados
                 </span>
-                <span className="font-serif text-2xl">{messagesSent} / 25</span>
+                <span className="font-serif text-2xl">{messagesSent}</span>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => setMessagesSent(Math.max(0, messagesSent - 1))} className="flex-1 py-3 border border-[#F9F8F6]/20 hover:bg-[#F9F8F6]/10 transition-all duration-500 rounded-none text-xs uppercase tracking-[0.2em]">-</button>
-                <button onClick={() => setMessagesSent(Math.min(25, messagesSent + 1))} className="flex-1 py-3 bg-[#F9F8F6]/5 hover:bg-[#D4AF37] hover:text-[#1A1A1A] transition-all duration-500 rounded-none text-xs uppercase tracking-[0.2em]">+</button>
+              
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => setMessagesSent(Math.max(0, messagesSent - 1))} className="flex-1 py-2 border border-[#F9F8F6]/20 hover:bg-[#F9F8F6]/10 transition-all duration-500 rounded-none text-xs uppercase tracking-[0.2em]">-</button>
+                <button onClick={() => setMessagesSent(messagesSent + 1)} className="flex-1 py-2 bg-[#F9F8F6]/5 hover:bg-[#D4AF37] hover:text-[#1A1A1A] transition-all duration-500 rounded-none text-xs uppercase tracking-[0.2em]">+</button>
+              </div>
+
+              {/* LÍNEA AZUL DE PROSPECCIÓN DIARIA */}
+              <div className="relative pt-2">
+                <div className="flex justify-between text-[10px] uppercase tracking-[0.2em] text-[#3B82F6] mb-2 font-medium">
+                  <span>Meta Diaria (5)</span>
+                  <span>{messagesSent % 5 === 0 && messagesSent > 0 ? 5 : messagesSent % 5} / 5</span>
+                </div>
+                <div className="h-[2px] w-full bg-[#3B82F6]/10 relative">
+                  <div 
+                    className="absolute top-0 left-0 h-full bg-[#3B82F6] transition-all duration-700 ease-out shadow-[0_0_8px_rgba(59,130,246,0.5)]"
+                    style={{ width: `${Math.min(((messagesSent % 5 === 0 && messagesSent > 0 ? 5 : messagesSent % 5) / 5) * 100, 100)}%` }}
+                  ></div>
+                </div>
               </div>
             </div>
+
             <div className="border-t border-[#F9F8F6]/20 pt-6 flex justify-between items-center">
               <span className="text-xs uppercase tracking-[0.2em] text-[#6C6863] flex items-center gap-2">
                 <TrendingUp size={14} />
@@ -323,7 +337,18 @@ export default function DashboardAxoLabs() {
                       </div>
                       
                       <div className="flex items-center gap-4">
-                        {prospect.hasCall && <Phone size={16} className="text-[#D4AF37]" strokeWidth={1.5} />}
+                        {/* BOTÓN WHATSAPP DIRECTO */}
+                        <a 
+                          href={getWhatsAppLink(prospect.phone, prospect.name)} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="group/wa flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border border-[#3B82F6]/30 text-[#3B82F6] hover:bg-[#3B82F6] hover:text-[#1A1A1A] transition-all duration-500"
+                          title="Abrir WhatsApp"
+                        >
+                          <Phone size={12} className="group-hover:text-[#1A1A1A] transition-colors" />
+                          Chat
+                        </a>
+
                         <button 
                           onClick={() => togglePaidStatus(prospect.id)}
                           className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] px-3 py-1.5 border transition-all duration-500 ${prospect.isPaid ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-[#F9F8F6]/20 text-[#6C6863] hover:border-[#F9F8F6]/50'}`}
